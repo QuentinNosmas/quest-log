@@ -1,0 +1,6 @@
+# Sauvegardes personnelles : ne jamais les publier
+quest-log-sauvegarde-*.json
+node_modules/
+# Exemples d origine (non utilises par le site) et reglages de l editeur
+assets/exemples/
+.claude/

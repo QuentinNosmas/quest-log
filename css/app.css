@@ -1,0 +1,199 @@
+/* Mise en page de l'application (les composants pixel sont dans pixel.css) */
+
+.app {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+  align-items: start;
+}
+.barre-laterale { position: sticky; top: 24px; padding: 0; }
+.logo { display: flex; align-items: center; gap: 10px; padding: 16px 16px 4px; text-decoration: none; font-size: 13px; }
+.contenu { display: flex; flex-direction: column; gap: 24px; min-width: 0; max-width: 900px; }
+.contenu > .cadre { margin: var(--px); }
+
+.vue-tete { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
+.vue-tete h1 { margin: 0; font-size: 18px; }
+.vue-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; margin-top: 12px; }
+.vue-tete .vue-actions { margin-top: 0; }
+.vue-actions.centre { justify-content: center; }
+.actions-fenetre { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 12px; margin-top: 16px; }
+.note { font-size: 19px; color: var(--texte-doux); }
+.lien-mission { font-size: 19px; color: var(--texte-doux); text-decoration: none; }
+.lien-mission:hover { color: var(--bois); text-decoration: underline; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Bandeaux */
+.rappel, .victoire, .alerte-stockage { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.rappel p, .alerte-stockage p { flex: 1 1 260px; margin: 0; }
+.rappel { --c-fond: var(--or-clair); --c-clair: #fff3b8; --c-ombre: var(--or); }
+.alerte-stockage {
+  position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 40; max-width: 760px; margin: 0 auto;
+  --c-fond: #f9d3c9; --c-clair: #fde6df; --c-ombre: var(--rubis-clair);
+}
+.alerte-stockage[hidden] { display: none; }
+.victoire { margin: 16px 0 4px; padding: 12px 16px; background: var(--or-clair); box-shadow: inset 0 0 0 var(--px) var(--or); }
+.victoire h2 { margin: 0 0 6px; }
+.victoire p { margin: 0; }
+
+/* Missions */
+.onglets { display: flex; flex-wrap: wrap; gap: 0 8px; }
+.filtres { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.filtre { border: 0; cursor: pointer; font-family: var(--police-titre); }
+.filtre:not(.actif) { opacity: .5; }
+.filtre.actif { transform: translateY(-2px); }
+.carte-mission { display: block; color: inherit; text-decoration: none; }
+.carte-mission:hover { --c-fond: #fcefd6; }
+.carte-mission h3 { margin-bottom: 10px; }
+.mission-tete h1 { font-size: 18px; margin: 0 0 12px; }
+.sous-taches li { flex-wrap: wrap; }
+.st-titre { flex: 1 1 180px; overflow-wrap: anywhere; }
+.st-actions { display: flex; gap: 0 4px; }
+.st-actions .btn, .tache-actions .btn { margin-bottom: calc(3 * var(--px)); }
+.form-tache { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; width: 100%; }
+.form-tache.ajout { margin-top: 20px; }
+.form-tache .champ { flex: 1 1 200px; width: auto; min-width: 0; }
+.form-tache .champ-duree { flex: 0 0 110px; }
+.form-tache .message-erreur { flex-basis: 100%; margin-top: 0; }
+
+/* Fenêtres */
+.voile > .fenetre-large { width: min(720px, 100%); }
+.rangee-champs { display: flex; flex-wrap: wrap; gap: 0 20px; }
+.rangee-champs > * { flex: 1 1 200px; }
+.choix-importance { border: 0; padding: 0; margin: 0 0 8px; display: flex; gap: 4px; }
+.choix-importance label { cursor: pointer; padding: 4px; }
+.choix-importance img { filter: grayscale(1) brightness(1.1); opacity: .35; }
+.choix-importance label:has(input:checked) img, .choix-importance label:has(~ label input:checked) img { filter: none; opacity: 1; }
+.choix-importance label:has(input:focus-visible) { outline: var(--px) dashed var(--braise); }
+.aide { margin: 12px 0; font-size: 19px; }
+.aide summary { cursor: pointer; color: var(--bois); }
+.aide ul { margin: 8px 0 0; padding-left: 20px; }
+.apercu { margin-top: 12px; }
+.apercu-mission { margin-bottom: 16px; }
+.apercu-mission h3 { margin-bottom: 8px; }
+.apercu .sous-taches { margin: 8px 0; }
+.apercu .sous-taches li > span:first-child { flex: 1; }
+.message-info { display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 20px; color: var(--lagon-fonce); }
+.choix-taches { list-style: none; margin: 0; padding: 0; max-height: 60vh; overflow-y: auto; }
+.choix-taches .btn { display: flex; width: calc(100% - 2 * var(--px)); justify-content: space-between; text-align: left; font-family: var(--police-texte); font-size: 20px; }
+.choix-titre { flex: 1; }
+
+/* Réglages */
+.temps-jours { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px 16px; }
+.temps-jours .message-erreur, .temps-jours .actions-fenetre { grid-column: 1 / -1; }
+.jour .etiquette { margin-bottom: 4px; }
+.rangee-texte { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; }
+.champ-court { width: 90px; }
+.zone-danger h2 { color: var(--rubis); }
+section > h2 { display: flex; align-items: center; gap: 12px; }
+
+/* Bourse (menu) */
+.bourse { display: flex; align-items: center; gap: 10px; margin: 8px 12px 0; padding: 8px 10px; color: var(--or-clair); text-decoration: none; background: var(--bois-fonce); box-shadow: inset 0 0 0 2px var(--bois-profond); }
+.bourse b { font-family: var(--police-titre); font-size: 12px; font-weight: normal; color: var(--or); }
+.bourse small { display: block; color: var(--parchemin-ombre); font-size: 17px; }
+.bourse:hover { background: var(--bois-profond); }
+
+/* Page Travail : rien que le paysage */
+.sortie-travail { display: none; position: fixed; top: 12px; left: 12px; z-index: 30; opacity: .35; }
+.sortie-travail:hover, .sortie-travail:focus-visible { opacity: 1; }
+.mode-travail .app, .mode-travail .alerte-stockage, .mode-travail .toast { display: none; }
+.mode-travail .sortie-travail { display: inline-flex; }
+
+/* Personnage */
+.perso { display: grid; grid-template-columns: 240px 1fr; gap: 20px 28px; align-items: start; }
+.perso-scene {
+  display: grid; place-items: center; padding: 16px 0 8px;
+  background: var(--lagon-clair);
+  box-shadow: inset 0 -40px 0 var(--herbe), inset 0 -44px 0 var(--herbe-fonce), 0 0 0 var(--px) var(--encre);
+  margin: var(--px);
+}
+.perso-reglages .etiquette { margin-top: 14px; }
+.pastilles { display: flex; flex-wrap: wrap; gap: 10px; }
+.pastille { width: 32px; height: 32px; border: 0; cursor: pointer; background: var(--c); box-shadow: 0 0 0 3px var(--encre); margin: 4px; }
+.pastille.actif { box-shadow: 0 0 0 3px var(--encre), 0 0 0 7px var(--or); }
+.boutique { list-style: none; padding: 0; margin: 0 0 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.objet { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; padding: 10px 6px 0; background: var(--parchemin-clair); box-shadow: 0 0 0 2px var(--parchemin-fonce); margin: 2px; }
+.objet strong { font-weight: normal; font-size: 20px; line-height: 1; }
+.objet-image { height: 72px; display: grid; place-items: center; }
+.objet.possede { background: #eaf3d6; }
+.objet.porte { background: var(--or-clair); box-shadow: 0 0 0 2px var(--or-fonce), 0 0 0 5px var(--or); }
+
+/* Carte */
+.cadre-carte { margin: var(--px); box-shadow: 0 0 0 var(--px) var(--encre); line-height: 0; }
+.carte-monde { display: block; width: 100%; height: auto; }
+.carte-monde .noeud.ouvert { cursor: pointer; }
+.carte-monde .noeud.ouvert:hover rect:nth-child(2) { fill: var(--or-clair); }
+.mondes { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 12px; }
+.monde { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px; background: var(--parchemin-clair); box-shadow: 0 0 0 2px var(--parchemin-fonce); margin: 2px; }
+.monde.ici { background: var(--or-clair); box-shadow: 0 0 0 2px var(--or-fonce); }
+.monde.ferme { opacity: .7; }
+.monde.ferme .monde-apercu { filter: grayscale(1); }
+.monde-apercu { width: 96px; height: 54px; object-fit: cover; flex: none; box-shadow: 0 0 0 2px var(--encre); }
+.monde-texte { flex: 1 1 140px; min-width: 0; display: flex; flex-direction: column; }
+.monde-texte .etiquette { margin: 0; }
+.monde-texte strong { font-weight: normal; }
+
+/* Calendrier */
+.titre-mois { text-align: center; }
+.calendrier { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.entete-cal { font-family: var(--police-titre); font-size: 9px; text-align: center; color: var(--bois); padding-bottom: 4px; }
+.jour-cal { min-height: 84px; padding: 4px; background: var(--parchemin-clair); box-shadow: inset 0 0 0 2px var(--parchemin-ombre); display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.jour-cal .num { font-size: 18px; color: var(--texte-doux); }
+.jour-cal.hors { opacity: .35; }
+.jour-cal.passe { background: var(--parchemin); }
+.jour-cal.aujourdhui { box-shadow: inset 0 0 0 3px var(--or-fonce); background: var(--or-clair); }
+.jour-cal.aujourdhui .num { color: var(--texte); }
+.cal-mission { display: block; font-size: 16px; line-height: 1.1; padding: 1px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; color: var(--encre); background: var(--parchemin-ombre); }
+.cal-mission.badge-partiel { background: var(--rubis); color: var(--parchemin-clair); }
+.cal-mission.badge-devoir { background: var(--lagon); }
+.cal-mission.badge-perso { background: var(--herbe); }
+.cal-mission.badge-autre { background: var(--crepuscule-clair); }
+.cal-mission.fini { opacity: .5; text-decoration: line-through; }
+.liste-echeances { list-style: none; margin: 0; padding: 0; }
+.liste-echeances li { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 4px 12px; padding: 8px 0; border-bottom: 2px dashed var(--parchemin-ombre); }
+.date-echeance { font-family: var(--police-titre); font-size: 10px; color: var(--bois); }
+.lien-titre { color: var(--texte); text-decoration: none; overflow-wrap: anywhere; }
+.lien-titre:hover { text-decoration: underline; }
+
+/* Stats */
+.activite { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; gap: 4px 6px; overflow-x: auto; padding: 4px 2px 8px; }
+.activite-mois { grid-column: 2; display: grid; grid-auto-columns: 12px; gap: 3px; font-size: 15px; color: var(--texte-doux); }
+.activite-mois span { grid-row: 1; white-space: nowrap; }
+.activite-jours { display: grid; grid-template-rows: repeat(7, 12px); gap: 3px; font-size: 14px; line-height: 12px; color: var(--texte-doux); }
+.activite-grille { display: grid; grid-template-rows: repeat(7, 12px); grid-auto-flow: column; grid-auto-columns: 12px; gap: 3px; }
+.activite-grille i, .legende i { display: block; width: 12px; height: 12px; box-shadow: inset 0 0 0 2px rgb(0 0 0 / .12); }
+.n0 { background: var(--parchemin-ombre); }
+.n1 { background: #d3e8a0; }
+.n2 { background: var(--herbe-clair); }
+.n3 { background: var(--herbe); }
+.n4 { background: var(--herbe-fonce); }
+.legende { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+.legende small { margin: 0 6px; }
+.chiffres { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 12px; }
+.chiffres li { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 12px; padding: 12px; }
+.chiffres .ico { grid-row: span 2; }
+.chiffres strong { font-family: var(--police-titre); font-size: 14px; font-weight: normal; }
+
+/* Téléphone : le menu devient une barre d'icônes en haut */
+@media (max-width: 799px) {
+  .app { display: block; padding: 8px 12px 48px; }
+  .barre-laterale { top: 4px; z-index: 20; margin: var(--px) var(--px) 20px; }
+  .logo { display: none; }
+  .bourse { margin: 6px 8px 0; padding: 4px 8px; }
+  .bourse .ico-2x { width: 16px; height: 16px; }
+  .bourse small { display: inline; margin-left: 8px; }
+  .menu { flex-direction: row; justify-content: space-between; padding: 4px; gap: 0; }
+  .menu a { position: relative; padding: 4px; }
+  .menu .libelle { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .menu hr { display: none; }
+  .contenu { gap: 20px; }
+  .cadre { padding: 16px 14px; }
+  .vue-tete h1, .mission-tete h1 { font-size: 15px; }
+  .perso { grid-template-columns: 1fr; }
+  .jour-cal { min-height: 52px; padding: 2px; }
+  .cal-mission { font-size: 0; height: 8px; padding: 0; }
+  .liste-echeances li { grid-template-columns: auto 1fr; }
+  .liste-echeances .badge { grid-column: 2; justify-self: start; }
+}

@@ -1,0 +1,537 @@
+/* =========================================================
+   QUEST LOG — système visuel pixel art
+   Toutes les couleurs, polices et tailles sont ici.
+   Règles : pas de coins arrondis, pas de dégradés lisses, pas de flou.
+   ========================================================= */
+
+/* Polices intégrées au projet (licence SIL OFL, voir assets/polices/) : le site marche hors ligne */
+@font-face { font-family: 'Press Start 2P'; src: url('../assets/polices/PressStart2P.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'VT323'; src: url('../assets/polices/VT323.woff2') format('woff2'); font-display: swap; }
+
+:root {
+  /* --- Palette (tirée des exemples : couchers de soleil, pièce d'or, guerriers) --- */
+  --encre: #2b1d2e;          /* contours */
+  --encre-douce: #4a3346;
+  --parchemin: #f8e7c4;
+  --parchemin-clair: #fff4dc;
+  --parchemin-ombre: #e2c08e;
+  --parchemin-fonce: #c79a5e;
+  --bois: #8a4b2a;
+  --bois-clair: #b8703a;
+  --bois-fonce: #5a2e1f;
+  --bois-profond: #3a1c12;
+  --or: #f7c548;
+  --or-clair: #ffe58a;
+  --or-fonce: #d48a1f;
+  --or-profond: #9a5a14;
+  --braise: #e8662a;
+  --braise-clair: #ff9a52;
+  --braise-fonce: #a8381c;
+  --rubis: #c8323c;
+  --rubis-clair: #ef6a5f;
+  --rubis-fonce: #7d1f2a;
+  --rubis-profond: #4f1219;
+  --herbe: #6cad3d;
+  --herbe-clair: #a7d65a;
+  --herbe-fonce: #3f7a2a;
+  --herbe-profond: #24501a;
+  --lagon: #4fa3a5;
+  --lagon-clair: #86d0c4;
+  --lagon-fonce: #2b6a73;
+  --lagon-profond: #1a454c;
+  --crepuscule: #8a4f8f;
+  --crepuscule-clair: #c07bb5;
+  --crepuscule-fonce: #553062;
+  --rose: #f28c8c;
+  --pierre: #a8a0b0;
+  --pierre-clair: #d4cedb;
+  --pierre-fonce: #6b6378;
+  --texte: #3a2418;
+  --texte-doux: #7a5a44;
+
+  /* --- Polices --- */
+  --police-titre: 'Press Start 2P', monospace;  /* titres, boutons, étiquettes courtes */
+  --police-texte: 'VT323', monospace;           /* tout le texte courant */
+
+  /* --- Taille d'un « pixel » de bordure --- */
+  --px: 4px;
+
+  /* --- Couleur derrière le paysage (avant son chargement) --- */
+  --fond-couleur: #3b2140;
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { image-rendering: pixelated; } /* toutes les images restent nettes une fois agrandies */
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--police-texte);
+  font-size: 22px;
+  line-height: 1.15;
+  color: var(--texte);
+  background: var(--fond-couleur);
+}
+
+/* Paysage du monde actuel, dessiné par js/fond.js (net, centré, bords prolongés) */
+#fond { position: fixed; left: 0; top: 0; z-index: -1; pointer-events: none; }
+
+h1, h2, h3, h4 {
+  font-family: var(--police-titre);
+  font-weight: normal;
+  line-height: 1.5;
+  margin: 0 0 16px;
+}
+h1 { font-size: 24px; }
+h2 { font-size: 16px; }
+h3 { font-size: 13px; }
+h4 { font-size: 11px; }
+p { margin: 0 0 12px; }
+small { font-size: 18px; color: var(--texte-doux); }
+code { font: inherit; color: var(--bois); }
+::selection { background: var(--or); color: var(--encre); }
+
+.titre-jeu {
+  font-family: var(--police-titre);
+  color: var(--or);
+  text-shadow: var(--px) var(--px) 0 var(--encre), calc(-1 * var(--px) / 2) calc(-1 * var(--px) / 2) 0 var(--or-profond);
+  letter-spacing: 2px;
+}
+
+.etiquette {
+  display: block;
+  font-family: var(--police-titre);
+  font-size: 10px;
+  color: var(--bois);
+  margin-bottom: 8px;
+}
+
+/* ---------- Icônes ---------- */
+.ico { width: 16px; height: 16px; vertical-align: middle; flex: none; }
+.ico-2x { width: 32px; height: 32px; }
+.ico-3x { width: 48px; height: 48px; }
+
+/* ---------- Cadre (le bloc de base, coins crantés) ---------- */
+.cadre {
+  --c-fond: var(--parchemin);
+  --c-clair: var(--parchemin-clair);
+  --c-ombre: var(--parchemin-ombre);
+  --c-bord: var(--encre);
+  background: var(--c-fond);
+  padding: 20px;
+  margin: var(--px);
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--c-clair),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--c-ombre),
+    0 calc(-1 * var(--px)) 0 0 var(--c-bord),
+    0 var(--px) 0 0 var(--c-bord),
+    calc(-1 * var(--px)) 0 0 0 var(--c-bord),
+    var(--px) 0 0 0 var(--c-bord),
+    calc(2 * var(--px)) calc(2 * var(--px)) 0 0 rgb(43 29 46 / .35);
+}
+.cadre-bois {
+  --c-fond: var(--bois);
+  --c-clair: var(--bois-clair);
+  --c-ombre: var(--bois-fonce);
+  color: var(--parchemin-clair);
+}
+.cadre-bois .etiquette, .cadre-bois small { color: var(--or-clair); }
+.cadre-sombre {
+  --c-fond: var(--encre-douce);
+  --c-clair: #5e4459;
+  --c-ombre: var(--encre);
+  color: var(--parchemin-clair);
+}
+.cadre-creux { /* zone enfoncée à l'intérieur d'un cadre */
+  --c-fond: var(--parchemin-ombre);
+  --c-clair: var(--parchemin-fonce);
+  --c-ombre: var(--parchemin);
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--c-clair),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--c-ombre),
+    0 calc(-1 * var(--px)) 0 0 var(--c-bord),
+    0 var(--px) 0 0 var(--c-bord),
+    calc(-1 * var(--px)) 0 0 0 var(--c-bord),
+    var(--px) 0 0 0 var(--c-bord);
+}
+
+/* ---------- Fenêtre (cadre + barre de titre) ---------- */
+.fenetre { padding: 0; }
+.fenetre-titre {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bois);
+  color: var(--or-clair);
+  font-family: var(--police-titre);
+  font-size: 12px;
+  padding: 10px 12px;
+  box-shadow: inset 0 calc(-1 * var(--px)) 0 0 var(--bois-fonce), inset 0 var(--px) 0 0 var(--bois-clair), 0 var(--px) 0 0 var(--encre);
+  margin-bottom: var(--px);
+}
+.fenetre-titre > span { flex: 1; text-shadow: 2px 2px 0 var(--bois-profond); }
+.fenetre-corps { padding: 20px; }
+
+/* ---------- Boutons (s'enfoncent au clic) ---------- */
+.btn {
+  --c-fond: var(--or);
+  --c-clair: var(--or-clair);
+  --c-ombre: var(--or-fonce);
+  --c-profond: var(--or-profond);
+  --c-texte: var(--encre);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--police-titre);
+  font-size: 12px;
+  line-height: 1.4;
+  text-decoration: none;
+  color: var(--c-texte);
+  background: var(--c-fond);
+  border: 0;
+  border-radius: 0;
+  padding: 14px 18px;
+  margin: var(--px) var(--px) calc(3 * var(--px));
+  cursor: pointer;
+  user-select: none;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--c-clair),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--c-ombre),
+    0 var(--px) 0 0 var(--c-profond),
+    0 calc(-1 * var(--px)) 0 0 var(--encre),
+    0 calc(2 * var(--px)) 0 0 var(--encre),
+    calc(-1 * var(--px)) 0 0 0 var(--encre),
+    calc(-1 * var(--px)) var(--px) 0 0 var(--encre),
+    var(--px) 0 0 0 var(--encre),
+    var(--px) var(--px) 0 0 var(--encre);
+}
+.btn:hover { filter: brightness(1.08); }
+.btn:active, .btn.enfonce {
+  transform: translateY(var(--px));
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--c-ombre),
+    0 calc(-1 * var(--px)) 0 0 var(--encre),
+    0 var(--px) 0 0 var(--encre),
+    calc(-1 * var(--px)) 0 0 0 var(--encre),
+    var(--px) 0 0 0 var(--encre);
+}
+.btn:disabled, .btn[aria-disabled='true'] {
+  --c-fond: var(--pierre);
+  --c-clair: var(--pierre-clair);
+  --c-ombre: var(--pierre-fonce);
+  --c-profond: var(--pierre-fonce);
+  --c-texte: var(--pierre-fonce);
+  cursor: not-allowed;
+  filter: none;
+  transform: none;
+}
+.btn-vert   { --c-fond: var(--herbe);  --c-clair: var(--herbe-clair);  --c-ombre: var(--herbe-fonce);  --c-profond: var(--herbe-profond); }
+.btn-lagon  { --c-fond: var(--lagon);  --c-clair: var(--lagon-clair);  --c-ombre: var(--lagon-fonce);  --c-profond: var(--lagon-profond); }
+.btn-rouge  { --c-fond: var(--rubis);  --c-clair: var(--rubis-clair);  --c-ombre: var(--rubis-fonce);  --c-profond: var(--rubis-profond); --c-texte: var(--parchemin-clair); }
+.btn-bois   { --c-fond: var(--bois);   --c-clair: var(--bois-clair);   --c-ombre: var(--bois-fonce);   --c-profond: var(--bois-profond);  --c-texte: var(--parchemin-clair); }
+.btn-parchemin { --c-fond: var(--parchemin); --c-clair: var(--parchemin-clair); --c-ombre: var(--parchemin-ombre); --c-profond: var(--parchemin-fonce); }
+.btn-petit { font-size: 10px; padding: 8px 10px; gap: 6px; }
+.btn-icone { padding: 8px; }
+.btn-grand { font-size: 14px; padding: 20px 26px; }
+
+/* ---------- Champs de saisie ---------- */
+.champ {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-size: 22px;
+  color: var(--texte);
+  background: var(--parchemin-clair);
+  border: 0;
+  border-radius: 0;
+  padding: 10px 12px;
+  margin: var(--px);
+  width: calc(100% - 2 * var(--px));
+  outline: none;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--parchemin-ombre),
+    0 calc(-1 * var(--px)) 0 0 var(--encre),
+    0 var(--px) 0 0 var(--encre),
+    calc(-1 * var(--px)) 0 0 0 var(--encre),
+    var(--px) 0 0 0 var(--encre);
+}
+.champ::placeholder { color: var(--parchemin-fonce); }
+.champ:focus {
+  background: #fffaf0;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--parchemin-ombre),
+    0 calc(-1 * var(--px)) 0 0 var(--braise),
+    0 var(--px) 0 0 var(--braise),
+    calc(-1 * var(--px)) 0 0 0 var(--braise),
+    var(--px) 0 0 0 var(--braise);
+}
+.champ.erreur {
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--parchemin-ombre),
+    0 calc(-1 * var(--px)) 0 0 var(--rubis),
+    0 var(--px) 0 0 var(--rubis),
+    calc(-1 * var(--px)) 0 0 0 var(--rubis),
+    var(--px) 0 0 0 var(--rubis);
+}
+textarea.champ { resize: vertical; min-height: 140px; line-height: 1.2; }
+select.champ {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 44px;
+  background: var(--parchemin-clair) url('../assets/icones/bas.svg') right 12px center / 16px no-repeat;
+}
+.champ-groupe { margin-bottom: 18px; }
+.message-erreur, .message-ok {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 20px;
+}
+.message-erreur { color: var(--rubis); }
+.message-ok { color: var(--herbe-fonce); }
+
+/* ---------- Case à cocher ---------- */
+.case {
+  appearance: none;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin: var(--px);
+  cursor: pointer;
+  background: var(--parchemin-clair);
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--parchemin-ombre),
+    0 calc(-1 * var(--px)) 0 0 var(--encre),
+    0 var(--px) 0 0 var(--encre),
+    calc(-1 * var(--px)) 0 0 0 var(--encre),
+    var(--px) 0 0 0 var(--encre);
+}
+.case:hover { background-color: #fffaf0; }
+.case:checked {
+  background: var(--herbe-clair) url('../assets/icones/coche.svg') center / 32px no-repeat;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--herbe),
+    0 calc(-1 * var(--px)) 0 0 var(--encre),
+    0 var(--px) 0 0 var(--encre),
+    calc(-1 * var(--px)) 0 0 0 var(--encre),
+    var(--px) 0 0 0 var(--encre);
+}
+
+/* ---------- Barre de progression ---------- */
+.barre {
+  position: relative;
+  height: 28px;
+  margin: var(--px) var(--px) 14px;
+  background: var(--encre-douce);
+  box-shadow:
+    inset 0 var(--px) 0 0 var(--encre),
+    0 calc(-1 * var(--px)) 0 0 var(--encre),
+    0 var(--px) 0 0 var(--encre),
+    calc(-1 * var(--px)) 0 0 0 var(--encre),
+    var(--px) 0 0 0 var(--encre);
+}
+.barre > span {
+  --c: var(--herbe);
+  --c-clair: var(--herbe-clair);
+  --c-fonce: var(--herbe-fonce);
+  display: block;
+  height: 100%;
+  width: var(--v, 0%);
+  /* segments pixel : couleur pleine coupée tous les 16px (arrêts nets, pas de dégradé) */
+  background: repeating-linear-gradient(90deg, var(--c) 0 12px, var(--c-fonce) 12px 16px);
+  box-shadow: inset 0 var(--px) 0 0 var(--c-clair), inset 0 calc(-1 * var(--px)) 0 0 var(--c-fonce);
+  transition: width .4s steps(8);
+}
+.barre.or > span, .barre > span.or { --c: var(--or); --c-clair: var(--or-clair); --c-fonce: var(--or-fonce); }
+.barre.rouge > span { --c: var(--rubis); --c-clair: var(--rubis-clair); --c-fonce: var(--rubis-fonce); }
+.barre > b {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--police-titre);
+  font-size: 10px;
+  font-weight: normal;
+  color: var(--parchemin-clair);
+  text-shadow: 2px 2px 0 var(--encre), -2px -2px 0 var(--encre), 2px -2px 0 var(--encre), -2px 2px 0 var(--encre);
+}
+
+/* ---------- Badges, puces, échéances ---------- */
+.badge {
+  --c-fond: var(--parchemin-ombre);
+  --c-texte: var(--encre);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--police-titre);
+  font-size: 9px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--c-texte);
+  background: var(--c-fond);
+  padding: 6px 8px;
+  margin: 2px;
+  box-shadow:
+    inset 0 -2px 0 0 rgb(0 0 0 / .2),
+    0 -2px 0 0 var(--encre),
+    0 2px 0 0 var(--encre),
+    -2px 0 0 0 var(--encre),
+    2px 0 0 0 var(--encre);
+}
+.badge-partiel { --c-fond: var(--rubis); --c-texte: var(--parchemin-clair); }
+.badge-devoir  { --c-fond: var(--lagon); }
+.badge-perso   { --c-fond: var(--herbe); }
+.badge-autre   { --c-fond: var(--crepuscule-clair); }
+.badge-bientot { --c-fond: var(--pierre-clair); --c-texte: var(--pierre-fonce); }
+.badge-termine { --c-fond: var(--or); }
+
+.puce { /* durée, raison… : petite étiquette en police texte */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 20px;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 3px 8px 4px;
+  margin: 2px;
+  background: var(--parchemin-clair);
+  color: var(--texte);
+  box-shadow: 0 -2px 0 0 var(--parchemin-fonce), 0 2px 0 0 var(--parchemin-fonce), -2px 0 0 0 var(--parchemin-fonce), 2px 0 0 0 var(--parchemin-fonce);
+}
+.puce-raison { background: #fbe9d6; color: var(--bois-fonce); box-shadow: 0 -2px 0 0 var(--rose), 0 2px 0 0 var(--rose), -2px 0 0 0 var(--rose), 2px 0 0 0 var(--rose); }
+
+.echeance { --c-fond: var(--lagon-clair); }
+.echeance-bientot { --c-fond: var(--or); }
+.echeance-urgent { --c-fond: var(--braise); }
+.echeance-depassee { --c-fond: var(--rubis); --c-texte: var(--parchemin-clair); animation: clignote 1s steps(1) infinite; }
+.echeance-aucune { --c-fond: var(--pierre-clair); --c-texte: var(--pierre-fonce); }
+@keyframes clignote { 50% { filter: brightness(1.35); } }
+
+.importance { display: inline-flex; gap: 2px; vertical-align: middle; }
+.importance .vide { filter: grayscale(1) brightness(1.1); opacity: .35; }
+
+/* ---------- Menu ---------- */
+.menu { display: flex; flex-direction: column; gap: 4px; padding: 12px; }
+.menu a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  font-family: var(--police-titre);
+  font-size: 11px;
+  color: var(--parchemin-clair);
+  text-decoration: none;
+  text-shadow: 2px 2px 0 var(--bois-profond);
+}
+.menu a:hover { background: var(--bois-clair); }
+.menu a[aria-current='page'] {
+  background: var(--or);
+  color: var(--encre);
+  text-shadow: none;
+  box-shadow: inset var(--px) var(--px) 0 0 var(--or-clair), inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--or-fonce);
+}
+.menu a.verrouille { cursor: not-allowed; opacity: .7; }
+.menu a.verrouille:hover { background: none; }
+.ico-verrou { position: relative; display: inline-flex; flex: none; }
+.ico-verrou > img:first-child { filter: grayscale(1) brightness(.8); }
+.ico-verrou > img:last-child { position: absolute; right: -6px; bottom: -6px; }
+.menu .libelle small { display: block; font-family: var(--police-texte); font-size: 17px; line-height: 1; color: var(--or-clair); text-shadow: none; }
+.menu hr { border: 0; height: var(--px); background: var(--bois-fonce); margin: 8px 0; }
+
+/* ---------- Voile + notification ---------- */
+.voile {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  overflow-y: auto;
+  padding: 16px;
+  background: rgb(43 29 46 / .7);
+  z-index: 50;
+}
+.voile[hidden] { display: none; }
+.voile > .fenetre { width: min(480px, 100%); margin: auto; animation: apparait .25s steps(4); } /* margin auto : centrée, et défilable si trop haute */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 32px;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  --c-fond: var(--or);
+  --c-clair: var(--or-clair);
+  --c-ombre: var(--or-fonce);
+  font-family: var(--police-titre);
+  font-size: 12px;
+  animation: apparait .3s steps(4);
+}
+@keyframes apparait { from { transform: translate(var(--tx, 0), 24px) scale(.6); opacity: 0; } }
+.toast { --tx: -50%; }
+
+/* étincelles de fin de tâche (créées en JS) */
+.etincelle {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+  z-index: 70;
+  background: var(--c, var(--or));
+  box-shadow: 0 0 0 2px var(--encre);
+  animation: etincelle .6s steps(6) forwards;
+}
+@keyframes etincelle { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+
+/* ---------- Mission ---------- */
+.mission-tete { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+.mission-tete h3 { margin: 0 0 10px; }
+.mission-infos { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; }
+.sous-taches, .taches-jour { list-style: none; margin: 16px 0 0; padding: 0; }
+.sous-taches li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 2px dashed var(--parchemin-ombre);
+}
+.sous-taches li > span:first-of-type { flex: 1; }
+.sous-taches .fait > span:first-of-type, .tache-jour.fait strong { text-decoration: line-through; text-decoration-thickness: 2px; color: var(--texte-doux); }
+
+/* ---------- Missions du jour ---------- */
+.jour-resume { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.tache-jour {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px;
+  flex-wrap: wrap;
+  border-bottom: 2px dashed var(--parchemin-ombre);
+}
+.tache-corps { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.tache-corps strong { font-weight: normal; font-size: 24px; }
+.tache-actions { display: flex; gap: 4px; }
+.tache-actions .btn { margin-bottom: calc(3 * var(--px)); }
+.tache-jour.fait { background: rgb(167 214 90 / .25); }
+
+/* ---------- État vide ---------- */
+.etat-vide { text-align: center; padding: 16px 8px; }
+.etat-vide p { margin: 16px 0; }
+
+/* ---------- Barre de défilement pixel ---------- */
+::-webkit-scrollbar { width: 16px; height: 16px; }
+::-webkit-scrollbar-track { background: var(--bois-fonce); }
+::-webkit-scrollbar-thumb { background: var(--bois-clair); box-shadow: inset 4px 4px 0 var(--or-fonce), inset -4px -4px 0 var(--bois); }
+
+/* ---------- Focus clavier visible ---------- */
+:focus-visible { outline: var(--px) dashed var(--braise); outline-offset: calc(2 * var(--px)); }
+.champ:focus-visible { outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
