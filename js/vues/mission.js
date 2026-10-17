@@ -2,7 +2,7 @@
 import { dateLongue, duree } from '../dates.js';
 import { actualiser, nouvelleTache, progression } from '../donnees.js';
 import { lireDuree } from '../saisie.js';
-import { badgeCategorie, badgeEcheance, barre, confirmer, etoiles, html, ico, notifier } from '../ui.js';
+import { avancement, badgeCategorie, badgeEcheance, barre, confirmer, etoiles, html, ico, notifier } from '../ui.js';
 import { ouvrirEdition } from './creation.js';
 
 export const titre = 'Mission';
@@ -13,10 +13,10 @@ const trouverTache = (app, id) => {
 };
 
 const ligne = (t, i, n) => html`<li class="${t.faite ? 'fait' : ''}">
-  <input type="checkbox" class="case" data-change="cocher" data-id="${t.id}" data-cle="c-${t.id}" ${t.faite ? html`checked` : ''} aria-label="Fait : ${t.titre}">
+  <input type="checkbox" class="case" data-change="cocher" data-id="${t.id}" data-cle="c-${t.id}" ${t.faite ? html`checked` : ''} aria-label="Terminée : ${t.titre}" title="Cocher si elle est entièrement terminée">
   <span class="st-titre">${t.titre}</span>
   ${t.reports ? html`<span class="puce puce-raison" title="Reportée ${t.reports} fois">${ico('sablier')}×${t.reports}</span>` : ''}
-  <span class="puce">${duree(t.minutes)}</span>
+  ${avancement(t)}
   <span class="st-actions">
     <button class="btn btn-icone btn-parchemin" data-action="monter" data-id="${t.id}" data-cle="h-${t.id}" title="Monter" ${i === 0 ? html`disabled` : ''}>${ico('haut', 1, 'Monter')}</button>
     <button class="btn btn-icone btn-parchemin" data-action="descendre" data-id="${t.id}" data-cle="b-${t.id}" title="Descendre" ${i === n - 1 ? html`disabled` : ''}>${ico('bas', 1, 'Descendre')}</button>
@@ -60,6 +60,7 @@ export function rendre(app, id) {
     </section>
     <section class="cadre">
       <h2>Sous-tâches</h2>
+      <p class="note">Elles avancent séance par séance depuis les missions du jour. Coche une sous-tâche quand elle est entièrement terminée.</p>
       ${m.taches.length ? html`<ul class="sous-taches">${m.taches.map((t, i) => (app.ui.edition === t.id ? ligneEdition(t) : ligne(t, i, m.taches.length)))}</ul>`
         : html`<p class="note">Aucune sous-tâche pour l'instant. Découpe ta mission en étapes avec leur durée estimée.</p>`}
       <form class="form-tache ajout" data-form="ajouter-tache" data-id="${m.id}">
@@ -134,6 +135,6 @@ export const formulaires = {
     const { m, t } = trouverTache(app, form.dataset.id), champs = lireFormulaireTache(form, data);
     if (!t || !champs) return;
     app.ui.edition = null;
-    app.modifier(() => Object.assign(t, champs), t, m);
+    app.modifier(() => { Object.assign(t, champs); actualiser(m); }, t);
   },
 };

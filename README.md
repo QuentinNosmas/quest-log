@@ -6,8 +6,8 @@ Ton gestionnaire de missions en pixel art. Le site est **100 % statique** : du H
 
 | Page | Ce qu'on y fait |
 |---|---|
-| **Accueil** | Les missions du jour, choisies selon l'importance, l'échéance et le travail restant. |
-| **Missions** | Toutes les missions et leurs sous-tâches (saisie rapide ou formulaire). |
+| **Accueil** | Les missions du jour, en **séances d'une heure** : une sous-tâche de 10h devient 10 séances réparties sur plusieurs jours. Elles sont choisies selon l'importance, l'échéance et le travail restant, en gardant l'ordre des sous-tâches de chaque mission. |
+| **Missions** | Toutes les missions et leurs sous-tâches (saisie rapide ou formulaire), avec l'avancement de chacune (ex. 3h / 10h). Une sous-tâche est finie quand ses séances atteignent son estimation, ou quand tu la coches « terminée ». |
 | **Travail** | Rien que le paysage du monde actuel, pour travailler au calme. `Échap` ou le bouton discret en haut à gauche pour sortir. |
 | **Calendrier** | Les échéances du mois et la liste des prochaines. |
 | **Stats** | Le calendrier d'activité façon GitHub (plus un carré est vert, plus tu as fait ce que tu avais prévu ce jour-là) et tes chiffres clés. |
@@ -17,7 +17,7 @@ Ton gestionnaire de missions en pixel art. Le site est **100 % statique** : du H
 
 **L'économie** :
 - **Les gains** :
-  - une sous-tâche cochée rapporte 12 pièces par heure de travail ;
+  - chaque séance faite (ou sous-tâche cochée « terminée ») rapporte 12 pièces par heure de travail ;
   - une mission terminée rapporte 10 × son importance ;
   - une journée du jour entièrement accomplie rapporte 15 pièces.
 - **Pas de triche possible** : décocher une tâche reprend ses pièces, et supprimer une mission ne reprend pas ce qui a été gagné.

@@ -3,7 +3,7 @@
 // Plus tard : une synchronisation en ligne s'ajoutera ici (mêmes fonctions, asynchrones),
 // sans rien changer au reste de l'application.
 import { dateISO } from './dates.js';
-import { normaliser, nouvellesDonnees } from './donnees.js';
+import { VERSION, normaliser, nouvellesDonnees } from './donnees.js';
 
 const CLE = 'quest-log';
 
@@ -11,12 +11,17 @@ const CLE = 'quest-log';
 export async function charger() {
   const texte = localStorage.getItem(CLE);
   if (!texte) return nouvellesDonnees();
+  let brut;
   try {
-    return normaliser(JSON.parse(texte));
+    brut = JSON.parse(texte);
   } catch (e) {
     localStorage.setItem(`${CLE}:illisible:${Date.now()}`, texte);
     throw new Error(`données illisibles (${e.message}), elles ont été mises de côté`);
   }
+  // avant de convertir des données d'une version précédente, on en garde une copie intacte
+  const copie = `${CLE}:avant-v${VERSION}`;
+  if (Number(brut?.version) < VERSION && !localStorage.getItem(copie)) localStorage.setItem(copie, texte);
+  return normaliser(brut); // une erreur « version plus récente » remonte telle quelle : rien n'est écrasé
 }
 
 /** Enregistre. Lève une erreur si le navigateur refuse (stockage plein ou bloqué). */

@@ -24,10 +24,11 @@ export function rendre(app) {
   let semaine = 0;
   for (let date = lundi; date <= auj; date = ajouterJours(date, 1)) semaine += parDate.get(date) ?? 0;
   const { actuelle, record } = series(parDate, auj);
+  const seances = Object.keys(d.journal).filter(cle => cle.startsWith('seance:')).length;
   const chiffres = [
     ['horloge', duree(total), 'de travail accompli'],
     ['calendrier', duree(semaine), 'cette semaine'],
-    ['coche', Object.keys(d.journal).length, 'tâches accomplies'],
+    ['coche', seances, seances > 1 ? 'séances accomplies' : 'séance accomplie'],
     ['trophee', d.missions.filter(m => progression(m).terminee).length, 'missions terminées'],
     ['feu', `${actuelle} j`, `série en cours (record : ${record} j)`],
     ['piece', gagne(d), 'pièces gagnées en tout'],

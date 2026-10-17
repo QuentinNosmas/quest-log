@@ -1,9 +1,9 @@
 // Point d'entrée : charge les données, gère la navigation (#/…) et relie les boutons à leurs actions.
 import { aujourdhui } from './dates.js';
-import { basculerTache, nouvellesDonnees, progression } from './donnees.js';
-import { enregistrerJournee, enregistrerTache, solde } from './economie.js';
+import { nouvellesDonnees, terminerTache } from './donnees.js';
+import { solde } from './economie.js';
 import { FOND_FIXE, afficherFond } from './fond.js';
-import { indexTaches, preparerJournee, tachesDuJour } from './journee.js';
+import { indexTaches, preparerJournee, validerSeance } from './journee.js';
 import { monde } from './mondes.js';
 import { charger, enregistrer, proteger, surChangementAilleurs } from './stockage.js';
 import { celebrer, fermerFenetres, html, ico, notifier } from './ui.js';
@@ -51,6 +51,7 @@ const app = {
   },
 
   async sauver() {
+    if (app.bloque) return; // données d'une version plus récente : on n'écrase rien
     try {
       await enregistrer(app.donnees);
       alerteStockage(null);
@@ -60,12 +61,12 @@ const app = {
     }
   },
 
-  /** Une sous-tâche vient d'être cochée : célébration et pièces gagnées. */
+  /** Une séance ou une sous-tâche vient d'être cochée : célébration et pièces gagnées. */
   recompenser(m, { missionFinie, journeeFinie, gain }, rect) {
     const grand = missionFinie || journeeFinie;
     celebrer(rect, grand);
     if (missionFinie) celebrer(null, true);
-    const texte = missionFinie ? `Mission accomplie : ${m.titre} !` : journeeFinie ? 'Journée accomplie ! Repos mérité.' : 'Tâche accomplie !';
+    const texte = missionFinie ? `Mission accomplie : ${m.titre} !` : journeeFinie ? 'Journée accomplie ! Repos mérité.' : 'Bien joué !';
     notifier(`${texte} +${gain} pièces`, grand ? 'trophee' : 'piece', grand ? 4000 : 2400);
   },
 
@@ -75,18 +76,20 @@ const app = {
 const actions = Object.assign({}, ...MODULES.map(m => m.actions));
 const formulaires = Object.assign({}, ...MODULES.map(m => m.formulaires));
 const changements = Object.assign({}, ...MODULES.map(m => m.changements), {
+  // case d'une séance du jour (accueil)
+  seance(app, el) {
+    const rect = el.getBoundingClientRect(), faite = el.checked;
+    const resultat = app.modifier(d => validerSeance(d, el.dataset.id, faite, app.aujourdhui));
+    if (faite && resultat) app.recompenser(resultat.m, resultat, rect);
+  },
+  // case « terminée » d'une sous-tâche (page de la mission)
   cocher(app, el) {
     const x = indexTaches(app.donnees).get(el.dataset.id);
     if (!x) return;
     const rect = el.getBoundingClientRect(), faite = el.checked;
-    const resultat = app.modifier(d => {
-      const missionFinie = basculerTache(x.m, x.t, faite);
-      let gain = enregistrerTache(d, x.t, x.m, faite, progression(x.m).terminee);
-      const journeeFinie = faite && d.journee.ids.includes(x.t.id) && tachesDuJour(d, app.aujourdhui).every(y => y.t.faite);
-      if (journeeFinie) gain += enregistrerJournee(d, app.aujourdhui);
-      return { missionFinie, journeeFinie, gain };
-    });
+    const resultat = app.modifier(d => terminerTache(d, x.m, x.t, faite, app.aujourdhui), x.t);
     if (faite) app.recompenser(x.m, resultat, rect);
+    else if (resultat.plusDeTemps) notifier('Pas encore finie : 1h de plus ajoutée à son estimation.', 'horloge', 3500);
   },
 });
 
@@ -176,6 +179,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && au
 try {
   app.donnees = await charger();
 } catch (e) {
+  app.bloque = e.versionRecente === true;
   alerteStockage(e);
 }
 try { app.protege = (await navigator.storage?.persisted?.()) ?? false; } catch { /* navigateur sans cette fonction */ }

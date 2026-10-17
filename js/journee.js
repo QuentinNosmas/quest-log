@@ -1,19 +1,23 @@
-// Missions du jour : choisit les sous-tâches à faire aujourd'hui (fonctions pures, testées dans tests/).
+// Missions du jour : des séances d'une heure (au plus) prises dans les sous-tâches, testées dans tests/.
+// Une sous-tâche de 10h devient 10 séances réparties sur plusieurs jours.
 //
 // Priorité d'une mission = urgence × poids de l'importance
 //   urgence = travail restant / temps disponible d'ici l'échéance  (13h à 4 jours ≫ 13h à un mois)
 //           + petit bonus de proximité ; en retard = très urgent ; sans échéance = urgence faible
-// Priorité d'une sous-tâche = priorité de sa mission + bonus par report, en gardant l'ordre de la mission.
-// On remplit ensuite la journée dans l'ordre des priorités sans dépasser le temps disponible.
-import { ajouterJours, dateCourte, dateISO, duree, joursEntre, jourSemaine } from './dates.js';
-import { statut } from './donnees.js';
+// On remplit la journée séance par séance : chaque fois, la mission la plus prioritaire donne une séance de sa
+// sous-tâche en cours (dans l'ordre de la mission). Chaque séance déjà prise la fait un peu baisser, pour varier.
+import { ajouterJours, dateCourte, duree, joursEntre, jourSemaine } from './dates.js';
+import { enregistrerJournee, majBonusMission, noterTravail } from './economie.js';
+import { avancer, progression, restant, statut, uid } from './donnees.js';
 
+export const SEANCE = 60; // durée d'une séance, en minutes
 export const minutesDispo = (reglages, date) => reglages.minutesParJour[jourSemaine(date)];
 const poids = importance => 0.5 + importance * 0.25; // 1 → 0,75 … 5 → 1,75
 const BONUS_REPORT = 0.25;
+const PENALITE_SEANCE = 0.3; // une mission perd un peu de priorité à chaque séance déjà prévue aujourd'hui
 
 export function analyserMission(m, reglages, aujourdhui) {
-  const restantes = m.taches.reduce((s, t) => s + (t.faite ? 0 : t.minutes), 0);
+  const restantes = m.taches.reduce((s, t) => s + restant(t), 0);
   if (!m.echeance) return { restantes, jours: null, charge: null, urgence: 0.05 };
   const jours = joursEntre(aujourdhui, m.echeance);
   if (jours < 0) return { restantes, jours, charge: Infinity, urgence: 3 + Math.min(-jours, 10) * 0.1 };
@@ -23,7 +27,7 @@ export function analyserMission(m, reglages, aujourdhui) {
   return { restantes, jours, charge, urgence: charge + 1 / (jours + 1) };
 }
 
-/** Toutes les sous-tâches à faire, de la plus prioritaire à la moins prioritaire. */
+/** Toutes les sous-tâches pas finies, de la plus prioritaire à la moins prioritaire (pour « Ajouter une séance »). */
 export function candidates(donnees, aujourdhui) {
   const liste = [];
   for (const m of donnees.missions) {
@@ -38,19 +42,36 @@ export function candidates(donnees, aujourdhui) {
   return liste.sort((x, y) => y.score - x.score);
 }
 
-/** Choisit des sous-tâches pour remplir `budget` minutes, en gardant l'ordre des sous-tâches de chaque mission. */
-export function proposer(donnees, aujourdhui, budget, exclus = new Set()) {
-  const choisis = [], bloquees = new Set();
-  let reste = budget;
-  for (const { t, m } of candidates(donnees, aujourdhui)) {
-    if (reste <= 0) break;
-    if (bloquees.has(m.id)) continue;
-    if (exclus.has(t.id)) { bloquees.add(m.id); continue; } // reportée ou retirée : la suite de la mission attend aussi
-    if (t.minutes <= reste) { choisis.push(t.id); reste -= t.minutes; }
-    else if (reste === budget) { choisis.push(t.id); reste = 0; } // plus longue que la journée : on l'avance aujourd'hui
-    else bloquees.add(m.id); // l'étape suivante ne rentre pas : on ne saute pas à la suivante de la même mission
+/**
+ * Propose des séances pour remplir `budget` minutes : [{ tache, minutes }].
+ * `exclus` : sous-tâches reportées ou retirées aujourd'hui (leur mission attend demain).
+ * `prevu` : minutes déjà prévues aujourd'hui par sous-tâche (pas encore faites).
+ */
+export function proposer(donnees, aujourdhui, budget, { exclus = new Set(), prevu = new Map() } = {}) {
+  const files = [];
+  for (const m of donnees.missions) {
+    if (statut(m) !== 'encours') continue;
+    const taches = m.taches.filter(t => !t.faite).map(t => ({ t, reste: restant(t) - (prevu.get(t.id) ?? 0) })).filter(x => x.reste > 0);
+    if (taches.length) files.push({ taches, base: analyserMission(m, donnees.reglages, aujourdhui).urgence * poids(m.importance), prises: 0 });
   }
-  return choisis;
+  const seances = [];
+  for (let reste = budget; reste >= 15; ) {
+    let choix = null, meilleur = -Infinity;
+    for (const f of files) {
+      const tete = f.taches[0];
+      if (!tete || exclus.has(tete.t.id)) continue;
+      const score = f.base + BONUS_REPORT * tete.t.reports - PENALITE_SEANCE * f.prises;
+      if (score > meilleur) { choix = f; meilleur = score; }
+    }
+    if (!choix) break;
+    const tete = choix.taches[0], minutes = Math.min(SEANCE, tete.reste, reste);
+    seances.push({ tache: tete.t.id, minutes });
+    tete.reste -= minutes;
+    reste -= minutes;
+    choix.prises++;
+    if (tete.reste <= 0) choix.taches.shift();
+  }
+  return seances;
 }
 
 export function indexTaches(donnees) {
@@ -59,61 +80,89 @@ export function indexTaches(donnees) {
   return index;
 }
 
+const nouvelleSeance = ({ tache, minutes }, ajoutee = false) => ({ id: uid(), tache, minutes, faite: false, ajoutee });
+
+/** Minutes prévues aujourd'hui (séances pas encore faites), par sous-tâche. */
+function minutesPrevues(seances) {
+  const prevu = new Map();
+  for (const s of seances) if (!s.faite) prevu.set(s.tache, (prevu.get(s.tache) ?? 0) + s.minutes);
+  return prevu;
+}
+
 /** Crée le plan du jour s'il n'existe pas encore pour aujourd'hui. Renvoie true s'il a été créé. */
 export function preparerJournee(donnees, aujourdhui) {
   const j = donnees.journee; // un plan resté vide (aucune mission ce matin) se remplit dès qu'il y a de quoi faire
-  if (j?.date === aujourdhui && (j.ids.length || j.retirees.length || j.ajoutees.length)) return false;
+  if (j?.date === aujourdhui && (j.seances.length || j.retirees.length)) return false;
   if (j?.date === aujourdhui && !candidates(donnees, aujourdhui).length) return false;
-  donnees.journee = { date: aujourdhui, ids: proposer(donnees, aujourdhui, minutesDispo(donnees.reglages, aujourdhui)), retirees: [], ajoutees: [] };
+  donnees.journee = { date: aujourdhui, seances: proposer(donnees, aujourdhui, minutesDispo(donnees.reglages, aujourdhui)).map(s => nouvelleSeance(s)), retirees: [] };
   return true;
 }
 
-/** Nouvelle proposition : garde ce qui est déjà fait ou ajouté à la main, recalcule le reste. */
+/** Nouvelle proposition : garde les séances faites ou ajoutées à la main, recalcule le reste. */
 export function recalculerJournee(donnees, aujourdhui) {
   preparerJournee(donnees, aujourdhui);
   const j = donnees.journee, index = indexTaches(donnees);
-  const gardees = j.ids.filter(id => index.has(id) && (index.get(id).t.faite || j.ajoutees.includes(id)));
-  const occupe = gardees.reduce((s, id) => s + index.get(id).t.minutes, 0);
+  const gardees = j.seances.filter(s => index.has(s.tache) && (s.faite || s.ajoutee));
+  const occupe = gardees.reduce((s, x) => s + x.minutes, 0);
   const budget = Math.max(0, minutesDispo(donnees.reglages, aujourdhui) - occupe);
-  j.ids = [...gardees, ...proposer(donnees, aujourdhui, budget, new Set([...gardees, ...j.retirees]))];
+  const nouvelles = proposer(donnees, aujourdhui, budget, { exclus: new Set(j.retirees), prevu: minutesPrevues(gardees) });
+  j.seances = [...gardees, ...nouvelles.map(s => nouvelleSeance(s))];
 }
 
-const retirer = (liste, id) => liste.filter(x => x !== id);
-
-export function retirerDeJournee(donnees, id) {
-  const j = donnees.journee;
-  j.ids = retirer(j.ids, id);
-  j.ajoutees = retirer(j.ajoutees, id);
-  if (!j.retirees.includes(id)) j.retirees.push(id);
+/** Retirer une séance de la journée (sa sous-tâche n'est plus proposée aujourd'hui). */
+export function retirerSeance(donnees, id) {
+  const j = donnees.journee, s = j.seances.find(x => x.id === id);
+  if (!s) return;
+  j.seances = j.seances.filter(x => x !== s);
+  if (!j.retirees.includes(s.tache)) j.retirees.push(s.tache);
 }
 
-/** Reporter à demain : retirée aujourd'hui, et elle remontera en priorité les jours suivants. */
+/** Reporter à demain : toutes les séances prévues de cette sous-tâche sortent de la journée, et elle remontera ensuite. */
 export function reporter(donnees, id) {
-  const x = indexTaches(donnees).get(id);
-  if (x) { x.t.reports++; x.t.maj = new Date().toISOString(); }
-  retirerDeJournee(donnees, id);
+  const j = donnees.journee, s = j.seances.find(x => x.id === id);
+  const x = s && indexTaches(donnees).get(s.tache);
+  if (!x) return;
+  x.t.reports++;
+  x.t.maj = new Date().toISOString();
+  j.seances = j.seances.filter(y => y.faite || y.tache !== s.tache);
+  if (!j.retirees.includes(s.tache)) j.retirees.push(s.tache);
 }
 
-export function ajouterAJournee(donnees, id) {
-  const j = donnees.journee;
-  if (!j.ids.includes(id)) j.ids.push(id);
-  if (!j.ajoutees.includes(id)) j.ajoutees.push(id);
-  j.retirees = retirer(j.retirees, id);
+/** Ajoute une séance (1h, ou ce qui reste) d'une sous-tâche choisie. Renvoie false s'il n'y a plus rien à prévoir. */
+export function ajouterSeance(donnees, idTache) {
+  const j = donnees.journee, x = indexTaches(donnees).get(idTache);
+  const libre = x ? restant(x.t) - (minutesPrevues(j.seances).get(idTache) ?? 0) : 0;
+  if (libre <= 0) return false;
+  j.seances.push(nouvelleSeance({ tache: idTache, minutes: Math.min(SEANCE, libre) }, true));
+  j.retirees = j.retirees.filter(t => t !== idTache);
+  return true;
 }
 
-/** Ce qu'affiche l'accueil : le plan du jour + ce qui a été fait aujourd'hui ailleurs. */
-export function tachesDuJour(donnees, aujourdhui) {
+/** Ce qu'affiche l'accueil : les séances du jour (sauf celles d'une sous-tâche finie entre-temps). */
+export function seancesDuJour(donnees) {
   const index = indexTaches(donnees);
-  const ids = [...donnees.journee.ids];
-  for (const [id, { t }] of index) if (t.faite && t.faiteLe && dateISO(new Date(t.faiteLe)) === aujourdhui && !ids.includes(id)) ids.push(id);
-  return ids.filter(id => index.has(id) && !index.get(id).m.archivee).map(id => index.get(id));
+  return donnees.journee.seances
+    .filter(s => index.has(s.tache) && !index.get(s.tache).m.archivee && (s.faite || !index.get(s.tache).t.faite))
+    .map(s => ({ s, ...index.get(s.tache) }));
 }
 
+/** Coche ou décoche une séance : avancement de la sous-tâche, pièces, bonus de mission et de journée. */
+export function validerSeance(donnees, id, faite, aujourdhui) {
+  const s = donnees.journee.seances.find(x => x.id === id), x = s && indexTaches(donnees).get(s.tache);
+  if (!x || s.faite === faite) return null;
+  s.faite = faite;
+  const missionFinie = avancer(x.m, x.t, faite ? s.minutes : -s.minutes);
+  let gain = noterTravail(donnees, `seance:${s.id}`, faite ? s.minutes : 0, aujourdhui)
+    + majBonusMission(donnees, x.m, progression(x.m).terminee);
+  const journeeFinie = faite && seancesDuJour(donnees).every(y => y.s.faite);
+  if (journeeFinie) gain += enregistrerJournee(donnees, aujourdhui);
+  return { ...x, missionFinie, journeeFinie, gain };
+}
 
-/** Courtes raisons affichées à côté d'une tâche proposée (3 au maximum). */
-export function raisons(t, m, donnees, aujourdhui) {
+/** Courtes raisons affichées à côté d'une séance proposée (3 au maximum). */
+export function raisons(s, t, m, donnees, aujourdhui) {
   const a = analyserMission(m, donnees.reglages, aujourdhui), r = [];
-  if (donnees.journee?.ajoutees.includes(t.id)) r.push('ajoutée par toi');
+  if (s?.ajoutee) r.push('ajoutée par toi');
   if (a.jours !== null) {
     if (a.jours < 0) r.push(`en retard de ${-a.jours} j`);
     else if (a.jours === 0) r.push("à rendre aujourd'hui");
@@ -123,7 +172,6 @@ export function raisons(t, m, donnees, aujourdhui) {
   }
   if (m.importance >= 4) r.push(`importance ${m.importance}`);
   if (t.reports) r.push(`reportée ${t.reports} fois`);
-  if (t.minutes > minutesDispo(donnees.reglages, aujourdhui)) r.push('plus longue que ta journée');
   if (!r.length) r.push(a.jours === null ? 'sans échéance : pour avancer' : `échéance le ${dateCourte(m.echeance, aujourdhui)}`);
   return r.slice(0, 3);
 }

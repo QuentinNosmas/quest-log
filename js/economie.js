@@ -1,9 +1,8 @@
-// Économie du jeu : on gagne des pièces en accomplissant tâches, missions et journées,
-// on les dépense en équipement. Chaque gain est rangé sous une clé (tâche, mission ou jour) :
+// Économie du jeu : on gagne des pièces en travaillant (séances), en terminant missions et journées,
+// on les dépense en équipement. Chaque gain est rangé sous une clé (séance, tâche, mission ou jour) :
 // cocher puis décocher ne fait pas gagner deux fois, et supprimer une mission ne reprend rien.
-//   journal : { [idTâche]: { date, minutes, pieces } }   → aussi l'historique de tout ce qui a été fait (Stats)
+//   journal : { 'seance:<id>' | 'fin:<idTâche>': { date, minutes, pieces } } → aussi l'historique du travail (Stats)
 //   bonus   : { 'mission:<id>' | 'jour:<date>': pieces }
-import { dateISO } from './dates.js';
 import { objet, prixObjet, puissance } from './personnage.js';
 import { MONDES } from './mondes.js';
 
@@ -16,19 +15,19 @@ export const gagne = d => somme(Object.values(d.journal).map(e => e.pieces)) + s
 export const depense = d => somme(d.personnage.possedes.map(prixObjet));
 export const solde = d => gagne(d) - depense(d);
 
-/** Une sous-tâche vient d'être cochée ou décochée. Renvoie les pièces gagnées. */
-export function enregistrerTache(d, t, m, faite, missionTerminee) {
-  const cleMission = `mission:${m.id}`;
-  if (!faite) {
-    delete d.journal[t.id];
-    delete d.bonus[cleMission];
-    return 0;
-  }
-  const pieces = piecesTache(t.minutes);
-  d.journal[t.id] = { date: dateISO(new Date(t.faiteLe ?? Date.now())), minutes: t.minutes, pieces };
-  if (!missionTerminee || d.bonus[cleMission]) return pieces;
-  d.bonus[cleMission] = bonusMission(m.importance);
-  return pieces + d.bonus[cleMission];
+/** Note du travail fait sous une clé (minutes > 0), ou l'efface (minutes = 0). Renvoie les pièces gagnées. */
+export function noterTravail(d, cle, minutes, date) {
+  if (!minutes) { delete d.journal[cle]; return 0; }
+  d.journal[cle] = { date, minutes, pieces: piecesTache(minutes) };
+  return d.journal[cle].pieces;
+}
+
+/** Bonus de fin de mission : donné une fois quand elle est terminée, repris si elle ne l'est plus. Renvoie le gain. */
+export function majBonusMission(d, m, terminee) {
+  const cle = `mission:${m.id}`;
+  if (!terminee) { delete d.bonus[cle]; return 0; }
+  if (d.bonus[cle]) return 0;
+  return (d.bonus[cle] = bonusMission(m.importance));
 }
 
 /** Bonus « journée accomplie », une seule fois par jour. Renvoie les pièces gagnées. */

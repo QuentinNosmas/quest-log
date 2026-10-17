@@ -2,8 +2,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { lireDate, lireDuree, lireTache, lireSaisie } from '../js/saisie.js';
-import { nouvellesDonnees, nouvelleMission, normaliser, basculerTache, progression, exemples } from '../js/donnees.js';
-import { analyserMission, preparerJournee, recalculerJournee, reporter, candidates, indexTaches, raisons } from '../js/journee.js';
+import { nouvellesDonnees, nouvelleMission, normaliser, avancer, progression, exemples } from '../js/donnees.js';
+import { analyserMission, preparerJournee, recalculerJournee, reporter, ajouterSeance, candidates, indexTaches, raisons, validerSeance } from '../js/journee.js';
+import { solde } from '../js/economie.js';
 import { duree } from '../js/dates.js';
 
 const AUJ = '2026-10-17'; // un samedi
@@ -82,13 +83,17 @@ test('saisie rapide complète', () => {
   assert.equal(mauvais.erreurs.length, 2);
 });
 
-test('progression et fin de mission', () => {
+test('avancement par séances et fin de mission', () => {
   const m = nouvelleMission({ titre: 'M', taches: [{ titre: 'a', minutes: 60 }, { titre: 'b', minutes: 120 }] });
-  assert.equal(basculerTache(m, m.taches[0], true), false);
-  assert.equal(basculerTache(m, m.taches[1], true), true);   // dernière tâche → mission terminée
+  assert.equal(avancer(m, m.taches[0], 60), false);
+  assert.equal(m.taches[0].faite, true);                      // temps atteint → sous-tâche faite
+  avancer(m, m.taches[1], 60);
+  assert.equal(m.taches[1].faite, false);
+  assert.deepEqual(progression(m), { faites: 1, total: 2, minutesFaites: 120, minutesTotal: 180, terminee: false });
+  assert.equal(avancer(m, m.taches[1], 60), true);            // dernière séance → mission terminée
   assert.ok(m.termineeLe);
-  assert.deepEqual(progression(m), { faites: 2, total: 2, minutesFaites: 180, minutesTotal: 180, terminee: true });
-  basculerTache(m, m.taches[1], false);
+  avancer(m, m.taches[1], -60);
+  assert.equal(m.taches[1].faite, false);
   assert.equal(m.termineeLe, null);
 });
 
@@ -106,58 +111,72 @@ test('normaliser refuse les mauvais fichiers et répare le reste', () => {
   assert.equal(rond.missions.length, 3);
 });
 
-test('missions du jour', () => {
+test('missions du jour en séances de 1h', () => {
   const d = nouvellesDonnees(); // 4h par jour
   const proche = nouvelleMission({ titre: 'Partiel proche', echeance: '2026-10-21', importance: 3, taches: [{ titre: 'p1', minutes: 120 }, { titre: 'p2', minutes: 120 }, { titre: 'p3', minutes: 540 }] });
   const loin = nouvelleMission({ titre: 'Partiel loin', echeance: '2026-11-16', importance: 3, taches: [{ titre: 'l1', minutes: 120 }, { titre: 'l2', minutes: 660 }] });
   const perso = nouvelleMission({ titre: 'Perso', importance: 5, taches: [{ titre: 'x', minutes: 60 }] });
   d.missions.push(loin, perso, proche);
+  const titres = () => d.journee.seances.map(s => indexTaches(d).get(s.tache).t.titre);
 
   // 13h à 4 jours est plus urgent que 13h à un mois
   assert.ok(analyserMission(proche, d.reglages, AUJ).urgence > analyserMission(loin, d.reglages, AUJ).urgence);
   assert.equal(candidates(d, AUJ)[0].t.titre, 'p1');
 
+  // 4h = 4 séances d'1h, dans l'ordre des sous-tâches de la mission la plus urgente
   preparerJournee(d, AUJ);
-  const titres = () => d.journee.ids.map(id => indexTaches(d).get(id).t.titre);
-  assert.deepEqual(titres(), ['p1', 'p2']); // 4h remplies par le partiel proche
+  assert.deepEqual(titres(), ['p1', 'p1', 'p2', 'p2']);
+  assert.ok(d.journee.seances.every(s => s.minutes === 60));
+  assert.deepEqual(raisons(null, proche.taches[1], proche, d, AUJ).slice(0, 2), ['échéance dans 4 jours', '13h restantes en 4 j']);
 
   // le plan est figé pour la journée
   d.missions.push(nouvelleMission({ titre: 'Urgence', echeance: AUJ, importance: 5, taches: [{ titre: 'u', minutes: 60 }] }));
   assert.equal(preparerJournee(d, AUJ), false);
-  assert.deepEqual(titres(), ['p1', 'p2']);
+  assert.deepEqual(titres(), ['p1', 'p1', 'p2', 'p2']);
+
+  // une séance faite fait avancer sa sous-tâche (et rapporte des pièces) ; décocher annule tout
+  const premiere = d.journee.seances[0];
+  assert.equal(validerSeance(d, premiere.id, true, AUJ).gain, 12);
+  assert.equal(proche.taches[0].minutesFaites, 60);
+  assert.equal(validerSeance(d, premiere.id, true, AUJ), null);   // déjà cochée : rien ne change
+  validerSeance(d, premiere.id, false, AUJ);
+  assert.equal(proche.taches[0].minutesFaites, 0);
+  assert.equal(solde(d), 0);
 
   // une nouvelle proposition garde ce qui est fait et prend en compte les changements
-  basculerTache(proche, proche.taches[0], true);
+  validerSeance(d, premiere.id, true, AUJ);
   recalculerJournee(d, AUJ);
-  assert.deepEqual(titres(), ['p1', 'u', 'x']); // l'heure restante est comblée
+  assert.deepEqual(titres(), ['p1', 'u', 'p1', 'p2']);
 
-  // une tâche reportée sort de la journée et remonte ensuite
-  reporter(d, loin.taches[0].id);
-  assert.equal(loin.taches[0].reports, 1);
-  assert.ok(raisons(loin.taches[0], loin, d, AUJ).includes('reportée 1 fois'));
+  // reporter : les séances de cette sous-tâche sortent de la journée, elle remontera ensuite
+  reporter(d, d.journee.seances[3].id);
+  assert.equal(proche.taches[1].reports, 1);
+  assert.deepEqual(titres(), ['p1', 'u', 'p1']);
+  assert.ok(raisons(null, proche.taches[1], proche, d, AUJ).includes('reportée 1 fois'));
 
-  // tâche plus longue que la journée : proposée seule pour être avancée
-  const seul = nouvellesDonnees();
-  seul.missions.push(nouvelleMission({ titre: 'Gros', echeance: '2026-10-20', taches: [{ titre: 'énorme', minutes: 600 }] }));
-  preparerJournee(seul, AUJ);
-  assert.equal(seul.journee.ids.length, 1);
+  // une sous-tâche de 10h est découpée en séances, sur plusieurs jours
+  const gros = nouvellesDonnees();
+  gros.missions.push(nouvelleMission({ titre: 'Gros', echeance: '2026-10-30', taches: [{ titre: 'énorme', minutes: 600 }] }));
+  preparerJournee(gros, AUJ);
+  assert.deepEqual(gros.journee.seances.map(s => s.minutes), [60, 60, 60, 60]);
 
   // jour de repos
   const repos = nouvellesDonnees();
   repos.reglages.minutesParJour[5] = 0; // samedi
   repos.missions.push(perso);
   preparerJournee(repos, AUJ);
-  assert.deepEqual(repos.journee.ids, []);
+  assert.deepEqual(repos.journee.seances, []);
 
-  // l'ordre des sous-tâches d'une mission est respecté même si une étape ne rentre pas
+  // l'ordre des sous-tâches est respecté : q1 reportée, on ne saute pas à q2 ; on peut rajouter une séance à la main
   const ordre = nouvellesDonnees();
-  ordre.missions.push(nouvelleMission({ titre: 'DM', echeance: '2026-10-22', importance: 4, taches: [{ titre: 'q1', minutes: 120 }, { titre: 'q2', minutes: 150 }, { titre: 'redaction', minutes: 90 }] }));
+  const dm = nouvelleMission({ titre: 'DM', echeance: '2026-10-22', importance: 4, taches: [{ titre: 'q1', minutes: 90 }, { titre: 'q2', minutes: 150 }] });
+  ordre.missions.push(dm);
   preparerJournee(ordre, AUJ);
-  assert.deepEqual(ordre.journee.ids.map(id => indexTaches(ordre).get(id).t.titre), ['q1']);
-  reporter(ordre, ordre.journee.ids[0]);
+  assert.deepEqual(ordre.journee.seances.map(s => s.minutes), [60, 30, 60, 60, 30]); // q1 = 1h + 30 min, puis q2 = 2h30
+  reporter(ordre, ordre.journee.seances[0].id);
   recalculerJournee(ordre, AUJ);
-  assert.deepEqual(ordre.journee.ids, []); // q1 reportée : on ne saute pas à q2
-
-  // raisons lisibles
-  assert.deepEqual(raisons(proche.taches[1], proche, d, AUJ).slice(0, 2), ['échéance dans 4 jours', '11h restantes en 4 j']);
+  assert.deepEqual(ordre.journee.seances, []);
+  assert.equal(ajouterSeance(ordre, dm.taches[0].id), true);
+  assert.deepEqual(ordre.journee.seances.map(s => [s.minutes, s.ajoutee]), [[60, true]]);
+  assert.ok(raisons(ordre.journee.seances[0], dm.taches[0], dm, ordre, AUJ).includes('ajoutée par toi'));
 });

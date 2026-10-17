@@ -38,6 +38,11 @@ export function barre(fait, total, texte = `${duree(fait)} / ${duree(total)}`) {
   return html`<div class="barre${total && fait >= total ? ' or' : ''}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="${texte}"><span style="--v:${pct}%"></span><b>${texte}</b></div>`;
 }
 
+/** Avancement d'une sous-tâche : petite barre + « 3h / 10h ». */
+export const avancement = t => html`<span class="avancement" title="Avancement de la sous-tâche">
+  <span class="mini-barre"><i style="--v:${Math.round((Math.min(t.minutesFaites, t.minutes) / t.minutes) * 100)}%"></i></span>
+  ${duree(Math.min(t.minutesFaites, t.minutes))} / ${duree(t.minutes)}</span>`;
+
 // ---------- Fenêtres ----------
 const pile = [];
 addEventListener('keydown', e => { if (e.key === 'Escape' && pile.length) pile.at(-1).fermer(); });

@@ -58,6 +58,12 @@
 .form-tache .champ-duree { flex: 0 0 110px; }
 .form-tache .message-erreur { flex-basis: 100%; margin-top: 0; }
 
+/* Avancement d'une sous-tâche (séances faites / estimation) */
+.avancement { display: inline-flex; align-items: center; gap: 8px; font-size: 19px; color: var(--texte-doux); white-space: nowrap; }
+.mini-barre { display: inline-block; width: 64px; height: 10px; background: var(--parchemin-ombre); box-shadow: 0 0 0 2px var(--encre); }
+.mini-barre i { display: block; height: 100%; width: var(--v); background: var(--herbe); }
+.tache-jour.fait .mini-barre i, .sous-taches .fait .mini-barre i { background: var(--or); }
+
 /* Fenêtres */
 .voile > .fenetre-large { width: min(720px, 100%); }
 .rangee-champs { display: flex; flex-wrap: wrap; gap: 0 20px; }
